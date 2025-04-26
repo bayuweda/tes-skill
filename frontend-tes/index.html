@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Booking List</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: center;
+      }
+
+      th {
+        background-color: #f2f2f2;
+      }
+
+      select {
+        padding: 6px 10px;
+        margin-top: 10px;
+      }
+
+      #loading {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-weight: bold;
+        font-size: 18px;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 20px 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        border: 3px solid #ccc;
+        border-top: 3px solid #333;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        vertical-align: middle;
+        margin-right: 10px;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <h2>Daftar Booking</h2>
+
+    <label for="filter">Filter by Vehicle Type:</label>
+    <select id="filter">
+      <option value="">All</option>
+      <option value="SUV">SUV</option>
+      <option value="MPV">MPV</option>
+      <option value="LCGC">LCGC</option>
+    </select>
+
+    <div id="loading"><span class="spinner"></span> Loading data...</div>
+
+    <table id="bookingTable">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Vehicle</th>
+          <th>Type</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Days</th>
+          <th>Subtotal</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <script>
+      const tableBody = document.querySelector("#bookingTable tbody");
+      const filter = document.getElementById("filter");
+      const loading = document.getElementById("loading");
+      const bookingTable = document.getElementById("bookingTable");
+      let allBookings = [];
+
+      function showLoading(show) {
+        loading.style.display = show ? "block" : "none";
+        bookingTable.style.display = show ? "none" : "table";
+      }
+
+      function renderTable(data) {
+        tableBody.innerHTML = "";
+        if (data.length === 0) {
+          tableBody.innerHTML = `
+            <tr>
+              <td colspan="7">No bookings found.</td>
+            </tr>
+          `;
+          return;
+        }
+
+        data.forEach((item) => {
+          const row = `
+            <tr>
+              <td>${item.customer_name}</td>
+              <td>${item.vehicle_name}</td>
+              <td>${item.vehicle_type}</td>
+              <td>${item.start_date}</td>
+              <td>${item.end_date}</td>
+              <td>${item.total_days}</td>
+              <td>Rp ${item.sub_total.toLocaleString()}</td>
+            </tr>
+          `;
+          tableBody.innerHTML += row;
+        });
+      }
+
+      async function fetchBookings() {
+        showLoading(true);
+        try {
+          const res = await fetch(`http://localhost:8000/api/bookings`);
+          const data = await res.json();
+          allBookings = data;
+          renderTable(data);
+        } catch (err) {
+          console.error("Error fetching bookings", err);
+          tableBody.innerHTML = `
+            <tr>
+              <td colspan="7">Failed to load data.</td>
+            </tr>
+          `;
+        } finally {
+          setTimeout(() => {
+            showLoading(false);
+          }, 1000); // loading minimal 1 detik
+        }
+      }
+
+      // Filter berdasarkan tipe kendaraan
+      filter.addEventListener("change", () => {
+        showLoading(true);
+        setTimeout(() => {
+          const selected = filter.value.toLowerCase();
+          const filtered = selected
+            ? allBookings.filter(
+                (item) => item.vehicle_type.toLowerCase() === selected
+              )
+            : allBookings;
+          renderTable(filtered);
+          showLoading(false);
+        }, 500); // simulasi loading saat ganti filter
+      });
+
+      // Fetch data saat pertama kali load
+      fetchBookings();
+    </script>
+  </body>
+</html>
